@@ -17,39 +17,39 @@
 
 from datetime import datetime
 
-try:
-  from commercial.data.utils import allocate_id
-except ModuleNotFoundError:
-  allocate_id = None
+allocate_id = None
 
 
 class BaseModel(object):
-  id = int
-  created = datetime
-  modified = datetime
-  modified_override = None
+    id = int
+    created = datetime
+    modified = datetime
+    modified_override = None
 
-  def __init__(self, **kwargs):
-    self._set_attributes(kwargs)
+    def __init__(self, **kwargs):
+        self._set_attributes(kwargs)
 
-  def _set_attributes(self, kwds):
-    cls = self.__class__
+    def _set_attributes(self, kwds):
+        cls = self.__class__
 
-    for name in self._properties:
-      value = kwds.get(name, None)
+        for name in self._properties:
+            value = kwds.get(name, None)
 
-      expected_type = getattr(cls, name)  # Raises AttributeError for unknown properties.
-      if value and not isinstance(value, expected_type):
-        raise TypeError('"%s" property must be of type %s. Instead is %s.' % (name, expected_type, type(value)))
-      setattr(self, name, value)
+            expected_type = getattr(cls, name)  # Raises AttributeError for unknown properties.
+            if value and not isinstance(value, expected_type):
+                raise TypeError(
+                    '"%s" property must be of type %s. Instead is %s.'
+                    % (name, expected_type, type(value))
+                )
+            setattr(self, name, value)
 
-  def get_id(self):
-    return self.id
+    def get_id(self):
+        return self.id
 
-  def put(self):
-    self.modified = self.modified_override or datetime.utcnow()
-    if not self.id:
-      self.created = datetime.utcnow()
+    def put(self):
+        self.modified = self.modified_override or datetime.utcnow()
+        if not self.id:
+            self.created = datetime.utcnow()
 
-    if not self.id and allocate_id:
-      self.id = allocate_id(self)
+        if not self.id and allocate_id:
+            self.id = allocate_id(self)

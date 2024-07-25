@@ -186,9 +186,6 @@ def add_routes():
         app.before_request(middleware_handler)
 
 
-add_routes()
-
-
 @app.route("/")
 def home():
     if not current_user.is_authenticated:
@@ -301,3 +298,8 @@ def static_next_files(path: str):
     if not _is_safe_path("/_next_static", path):
         return "Invalid path", 400
     return send_from_directory("static/templates/_next_static", path)
+
+
+if __name__ == "__main__":
+    add_routes()
+    app.run()
