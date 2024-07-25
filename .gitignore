@@ -14,3 +14,7 @@ client_secrets.json
 **/cypress/screenshots
 **/coverage
 **/reports
+
+#localstuff
+.flake8
+pyproject.toml
