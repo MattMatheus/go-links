@@ -1,10 +1,13 @@
+# Modified by Matt Matheus on 25 July 2024
+# Description of changes: Adjusted error handling and line lengths
+
 import datetime
 import json
 import logging
 import os
 import traceback
 
-import jinja2
+# import jinja2
 from flask import (
     Flask,
     send_from_directory,
@@ -23,6 +26,7 @@ from werkzeug.routing import BaseConverter
 
 from shared_helpers import config, feature_flags
 from db import db
+from sqlalchemy.exc import SQLAlchemyError
 
 sentry_config = config.get_config_by_key_path(["monitoring", "sentry"])
 if sentry_config:
@@ -105,7 +109,7 @@ def init_app_without_routes(disable_csrf=False):
 
     @app.after_request
     def apply_csp(response):
-        if not "Content-Security-Policy" in response.headers:
+        if "Content-Security-Policy" not in response.headers:
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self' data:; "
                 "style-src 'self' fonts.googleapis.com 'unsafe-inline'; "
@@ -135,10 +139,19 @@ with app.app_context():
 
         if os.getenv("POSTGRES_UPGRADE_ON_START", "").lower() == "true":
             upgrade_db(directory=os.path.join(os.path.dirname(__file__), "migrations"))
-    except:
+    except SQLAlchemyError as e:
         logging.warning(
-            "Exception from Flask-Migrate/Alembic. This may be expected if you've deployed a new version of the"
-            " app and an older version hasn't finished shutting down, or you've rolled back versions. %s",
+            "SQLAlchemy error during Flask-Migrate/Alembic operation. This may be expected "
+            "if you've deployed a new version of the app and an older version hasn't "
+            "finished shutting down, or you've rolled back versions. "
+            "Error: %s\nTraceback: %s",
+            str(e),
+            traceback.format_exc(),
+        )
+    except Exception as e:
+        logging.error(
+            "Unexpected error during Flask-Migrate/Alembic operation. " "Error: %s\nTraceback: %s",
+            str(e),
             traceback.format_exc(),
         )
 
@@ -159,12 +172,8 @@ def add_routes():
     from modules.routing.handlers import routes as follow_routes
     from modules.users.handlers import routes as user_routes
 
-    try:
-        from commercial.blueprints import COMMERCIAL_BLUEPRINTS
-        from commercial.middleware import COMMERCIAL_MIDDLEWARE
-    except ModuleNotFoundError:
-        COMMERCIAL_BLUEPRINTS = []
-        COMMERCIAL_MIDDLEWARE = []
+    COMMERCIAL_BLUEPRINTS = []
+    COMMERCIAL_MIDDLEWARE = []
 
     app.register_blueprint(base_routes)
     app.register_blueprint(link_routes)
@@ -244,7 +253,10 @@ def layout_config():
         else config.get_config()
     )
 
-    return f"window._trotto = window._trotto || {{}}; window._trotto.layout = {json.dumps(_config.get('layout', {}))};"
+    return (
+        f"window._trotto = window._trotto || {{}}; "
+        f"window._trotto.layout = {json.dumps(_config.get('layout', {}))!s};"
+    )
 
 
 def _is_safe_path(base_path, user_input):
